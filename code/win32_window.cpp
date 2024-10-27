@@ -1,4 +1,5 @@
 #include <windows.h>
+static bool Running;
 
 LRESULT CALLBACK
 MainWindowCallback(HWND Window, 
@@ -17,12 +18,12 @@ MainWindowCallback(HWND Window,
         
         case WM_DESTROY:
         {
-            OutputDebugStringA("WM_DESTROY\n");
+            Running = false;
         } break;
         
         case WM_CLOSE:
         {
-            OutputDebugStringA("WM_CLOSE\n");
+            Running = false;
         } break;
         
         case WM_ACTIVATEAPP:
@@ -92,23 +93,38 @@ WinMain(HINSTANCE Instance,
                                       0,
                                       Instance,
                                       0);
-    }
-    
-    for(;;)                              // a for loop which would run forever
-    {
-        MSG Message;
-        BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
-        if (MessageResult > 0)  // 0 is the WM_QUIT message, -1 is invalid window handle
+        
+        if (Window)
         {
-            TranslateMessage(&Message);
-            DispatchMessageA(&Message);
+            Running = true;
+            while (Running)
+            {
+                MSG Message;
+                BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+                if (MessageResult > 0) // 0 is the WM_QUIT message, -1 is invalid window handle
+                {
+                    TranslateMessage(&Message);
+                    DispatchMessageA(&Message);
+                }
+                else
+                {
+                    break; // break out of the loop
+                }
+            }
         }
         else
         {
-            break; // out of the loop
+            // Window Creation failed!
+            // TODO: Logging
         }
+        // Exit proceures
     }
-    
+    else
+    {
+        
+        // Window Class Registration failed
+        // TODO: Logging
+    }
     
     return (0);
 }
