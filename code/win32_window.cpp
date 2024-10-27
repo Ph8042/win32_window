@@ -47,7 +47,7 @@ WinMain(HINSTANCE Instance,
 {
     WNDCLASS WindowClass = {};
     WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-    WindowClass.lpfnWndProc = ;
+    WindowClass.lpfnWndProc = MainWindowCallback;
     WindowClass.hInstance = Instance;
     // WindowClass.hCursor;
     // WindowClass.hIcon; 
