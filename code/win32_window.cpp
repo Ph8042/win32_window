@@ -55,14 +55,35 @@ WinMain(HINSTANCE Instance,
     
     if (RegisterClassA(&WindowClass))
     {
-        // Window Class Registration successful, the rest of our WinMain
-        // the rest of our WinMain
+        HWND Window = CreateWindowExA(0,
+                                      WindowClass.lpszClassName,
+                                      "Win32Window",
+                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                                      CW_USEDEFAULT,
+                                      CW_USEDEFAULT,
+                                      CW_USEDEFAULT,
+                                      CW_USEDEFAULT,
+                                      0,
+                                      0,
+                                      Instance,
+                                      0);
     }
-    else
+    
+    for(;;)                              // a for loop which would run forever
     {
-        // Window Class Registration failed
-        // TODO: Logging
+        MSG Message;
+        BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
+        if (MessageResult > 0)  // 0 is the WM_QUIT message, -1 is invalid window handle
+        {
+            TranslateMessage(&Message);
+            DispatchMessageA(&Message);
+        }
+        else
+        {
+            break; // out of the loop
+        }
     }
+    
     
     return (0);
 }
