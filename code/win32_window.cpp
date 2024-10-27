@@ -1,11 +1,23 @@
 #include <windows.h>
-static bool Running;
+global_variable bool Running;
+
+internal void
+Win32ResizeDIBSection(int Width, int Height)
+{
+    
+}
+
+internal void
+Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
+{
+    
+}
 
 LRESULT CALLBACK
-MainWindowCallback(HWND Window, 
-                   UINT Message,
-                   WPARAM WParam,
-                   LPARAM LParam)
+Win32MainWindowCallback(HWND Window, 
+                        UINT Message,
+                        WPARAM WParam,
+                        LPARAM LParam)
 {
     LRESULT Result = 0;
     
@@ -13,7 +25,11 @@ MainWindowCallback(HWND Window,
     {
         case WM_SIZE:
         {
-            OutputDebugStringA("WM_SIZE\n");
+            RECT ClientRect;
+            GetClientRect(Window, &ClientRect);
+            int Width = ClientRect.right - ClientRect.left;
+            int Height = ClientRect.bottom - ClientRect.top;
+            Win32ResizeDIBSection(Width, Height);
         } break;
         
         case WM_DESTROY:
@@ -40,18 +56,9 @@ MainWindowCallback(HWND Window,
             int Y = Paint.rcPaint.top;
             int Width = Paint.rcPaint.right - Paint.rcPaint.left;
             int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
-            static DWORD Operation = WHITENESS;
             
-            if (Operation == WHITENESS)
-            { 
-                Operation = BLACKNESS;
-            }
-            else
-            {
-                Operation = WHITENESS;
-            }
+            Win32UpdateWindow(DeviceContext, X, Y, Width, Height);
             
-            PatBlt(DeviceContext, X, Y, Width, Height, Operation);
             
             EndPaint(Window, &Paint);
         } break;
@@ -73,7 +80,7 @@ WinMain(HINSTANCE Instance,
 {
     WNDCLASS WindowClass = {};
     WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-    WindowClass.lpfnWndProc = MainWindowCallback;
+    WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
     // WindowClass.hCursor;
     // WindowClass.hIcon; 
