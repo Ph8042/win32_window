@@ -1,4 +1,17 @@
 #include <windows.h>
+#include <stdint.h>
+
+// unsigned integers
+typedef uint8_t u8;     // 1-byte long unsigned integer
+typedef uint16_t u16;   // 2-byte long unsigned integer
+typedef uint32_t u32;   // 4-byte long unsigned integer
+typedef uint64_t u64;   // 8-byte long unsigned integer
+// signed integers
+typedef int8_t s8;      // 1-byte long signed integer
+typedef int16_t s16;    // 2-byte long signed integer
+typedef int32_t s32;    // 4-byte long signed integer
+typedef int64_t s64;    // 8-byte long signed integer
+
 #define internal static 
 #define local_persist static 
 #define global_variable static
@@ -12,25 +25,56 @@ global_variable int BitmapHeight;
 internal void
 Win32ResizeDIBSection(int Width, int Height)
 {
-    BITMAPINFO BitmapInfo = {};
-    BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
-    BitmapInfo.bmiHeader.biWidth = BitmapWidth;
-    BitmapInfo.bmiHeader.biHeight = BitmapHeight;
-    BitmapInfo.bmiHeader.biPlanes = 1;
-    BitmapInfo.bmiHeader.biBitCount = 32;
-    BitmapInfo.bmiHeader.biCompression = BI_RGB;
-
     if (BitmapMemory)
     {
         VirtualFree(BitmapMemory, 0, MEM_RELEASE);
         // Optionally, you can check if the result of VirtualFree is not zero.
         // Print out an error message if it is.
     }
-
+    
+    BitmapWidth = Width;
+    BitmapHeight = Height;
     int BytesPerPixel = 4;
-    int BitmapMemorySize = BytesPerPixel * (Width * Height);
+    
+    BITMAPINFO BitmapInfo = {};
+    BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
+    BitmapInfo.bmiHeader.biWidth = BitmapWidth;
+    BitmapInfo.bmiHeader.biHeight = -BitmapHeight; // negative value: top-down pitch
+    BitmapInfo.bmiHeader.biPlanes = 1;
+    BitmapInfo.bmiHeader.biBitCount = 32;
+    BitmapInfo.bmiHeader.biCompression = BI_RGB;
+    
+    int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
     BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); 
-
+    
+    u8 *Row = (u8 *)BitmapMemory;
+    int Pitch = Width * BytesPerPixel;
+    
+    for (int Y = 0;
+         Y < BitmapHeight;
+         ++Y)
+    {
+        u8 *Pixel = (u8 *)Row;
+        for(int X = 0;
+            X < BitmapWidth;
+            ++X)
+        {
+            // Pixel in memory: BB GG RR XX
+            
+            *Pixel = 255; // write to byte 0
+            ++Pixel;   // advance by total of one byte
+            
+            *Pixel = 0; // write to byte 1
+            ++Pixel;   // advance by total of two bytes
+            
+            *Pixel = 0; // write to byte 2
+            ++Pixel;   // advance by total of three bytes
+            
+            *Pixel = 0; // write to byte 3 
+            ++Pixel;   // advance by total of four bytes -> full pixel!ixel
+        }
+        Row += Pitch;
+    }
 }
 
 internal void
@@ -38,7 +82,7 @@ Win32UpdateWindow(HDC DeviceContext, RECT *ClientRect)
 {
     int WindowWidth = ClientRect->right - ClientRect->left;
     int WindowHeight = ClientRect->bottom - ClientRect->top;
-
+    
     StretchDIBits(DeviceContext, 
                   0, 0, WindowWidth, WindowHeight, // destination rectangle (window)
                   0, 0, BitmapWidth, BitmapHeight, // source rectangle (bitmap buffer)
@@ -85,10 +129,6 @@ Win32MainWindowCallback(HWND Window,
         {
             PAINTSTRUCT Paint;
             HDC DeviceContext = BeginPaint(Window, &Paint);
-            int X = Paint.rcPaint.left;
-            int Y = Paint.rcPaint.top;
-            int Width = Paint.rcPaint.right - Paint.rcPaint.left;
-            int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
             RECT ClientRect;
             GetClientRect(Window, &ClientRect);
             Win32UpdateWindow(DeviceContext, &ClientRect);
@@ -118,52 +158,55 @@ WinMain(HINSTANCE Instance,
     // WindowClass.hIcon; 
     WindowClass.lpszClassName = "Win32WindowClass";
     
-    if (RegisterClassA(&WindowClass))
+    if(RegisterClassA(&WindowClass))
     {
-        HWND Window = CreateWindowExA(0,
-                                      WindowClass.lpszClassName,
-                                      "Win32Window",
-                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                      CW_USEDEFAULT,
-                                      CW_USEDEFAULT,
-                                      CW_USEDEFAULT,
-                                      CW_USEDEFAULT,
-                                      0,
-                                      0,
-                                      Instance,
-                                      0);
-        
-        if (Window)
-        {
+        HWND Window =
+            CreateWindowExA(
+                            0,
+                            WindowClass.lpszClassName,
+                            "Win32 Window",
+                            WS_OVERLAPPEDWINDOW|WS_VISIBLE,
+                            CW_USEDEFAULT,
+                            CW_USEDEFAULT,
+                            CW_USEDEFAULT,
+                            CW_USEDEFAULT,
+                            0,
+                            0,
+                            Instance,
+                            0);
+        if(Window)
+        {          
             Running = true;
-            while (Running)
+            while(Running)
             {
                 MSG Message;
-                BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
-                if (MessageResult > 0) // 0 is the WM_QUIT message, -1 is invalid window handle
+                while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
                 {
+                    if(Message.message == WM_QUIT)
+                    {
+                        Running = false;
+                    }
+                    
                     TranslateMessage(&Message);
                     DispatchMessageA(&Message);
                 }
-                else
-                {
-                    break; // break out of the loop
-                }
+                
+                HDC DeviceContext = GetDC(Window);
+                RECT ClientRect;
+                GetClientRect(Window, &ClientRect);
+                Win32UpdateWindow(DeviceContext, &ClientRect);
+                ReleaseDC(Window, DeviceContext);
             }
         }
         else
         {
-            // Window Creation failed!
             // TODO: Logging
         }
-        // Exit proceures
     }
     else
     {
-        
-        // Window Class Registration failed
         // TODO: Logging
     }
     
-    return (0);
+    return(0);
 }
