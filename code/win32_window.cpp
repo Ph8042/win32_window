@@ -1,26 +1,27 @@
 #include <windows.h>
 #include <stdint.h>
 
-// unsigned integers
+#define internal static 
+#define local_persist static 
+#define global_variable static
+
 typedef uint8_t u8;     // 1-byte long unsigned integer
 typedef uint16_t u16;   // 2-byte long unsigned integer
 typedef uint32_t u32;   // 4-byte long unsigned integer
 typedef uint64_t u64;   // 8-byte long unsigned integer
-// signed integers
+
 typedef int8_t s8;      // 1-byte long signed integer
 typedef int16_t s16;    // 2-byte long signed integer
 typedef int32_t s32;    // 4-byte long signed integer
 typedef int64_t s64;    // 8-byte long signed integer
-
-#define internal static 
-#define local_persist static 
-#define global_variable static
 
 global_variable bool Running;
 global_variable BITMAPINFO BitmapInfo;
 global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
 global_variable int BitmapHeight;
+
+global_variable int BytesPerPixel = 4;
 
 internal void
 Win32ResizeDIBSection(int Width, int Height)
@@ -34,9 +35,8 @@ Win32ResizeDIBSection(int Width, int Height)
     
     BitmapWidth = Width;
     BitmapHeight = Height;
-    int BytesPerPixel = 4;
     
-    BITMAPINFO BitmapInfo = {};
+    //BITMAPINFO BitmapInfo = {}; TODO: check why initialization makes it won't work
     BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
     BitmapInfo.bmiHeader.biWidth = BitmapWidth;
     BitmapInfo.bmiHeader.biHeight = -BitmapHeight; // negative value: top-down pitch
@@ -45,7 +45,7 @@ Win32ResizeDIBSection(int Width, int Height)
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
     
     int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
-    BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE); 
+    BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE); 
     
     u8 *Row = (u8 *)BitmapMemory;
     int Pitch = Width * BytesPerPixel;
@@ -61,13 +61,13 @@ Win32ResizeDIBSection(int Width, int Height)
         {
             // Pixel in memory: BB GG RR XX
             
-            *Pixel = 255; // write to byte 0
+            *Pixel = 34; // write to byte 0
             ++Pixel;   // advance by total of one byte
             
-            *Pixel = 0; // write to byte 1
+            *Pixel = 34; // write to byte 1
             ++Pixel;   // advance by total of two bytes
             
-            *Pixel = 0; // write to byte 2
+            *Pixel = 34; // write to byte 2
             ++Pixel;   // advance by total of three bytes
             
             *Pixel = 0; // write to byte 3 
@@ -128,6 +128,7 @@ Win32MainWindowCallback(HWND Window,
         case WM_PAINT:
         {
             PAINTSTRUCT Paint;
+
             HDC DeviceContext = BeginPaint(Window, &Paint);
             RECT ClientRect;
             GetClientRect(Window, &ClientRect);
@@ -194,7 +195,11 @@ WinMain(HINSTANCE Instance,
                 HDC DeviceContext = GetDC(Window);
                 RECT ClientRect;
                 GetClientRect(Window, &ClientRect);
+
+                int WindowWidth = ClientRect.right - ClientRect.left;
+                int WindowHeight = ClientRect.bottom - ClientRect.top;
                 Win32UpdateWindow(DeviceContext, &ClientRect);
+                
                 ReleaseDC(Window, DeviceContext);
             }
         }
