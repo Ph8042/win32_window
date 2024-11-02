@@ -78,9 +78,7 @@ Win32ResizeDIBSection(int Width, int Height)
     
     BytesPerPixel = 4;
     int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
-    BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE); 
-    
-    RenderGradient(128, 0);
+    BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);   
 }
 
 internal void
@@ -182,7 +180,9 @@ WinMain(HINSTANCE Instance,
                             Instance,
                             0);
         if(Window)
-        {          
+        {
+            int XOffset = 0;
+            int YOffset = 0;
             Running = true;
             while(Running)
             {
@@ -198,6 +198,9 @@ WinMain(HINSTANCE Instance,
                     DispatchMessageA(&Message);
                 }
                 
+                RenderGradient(XOffset, YOffset);
+                ++XOffset;
+
                 HDC DeviceContext = GetDC(Window);
                 RECT ClientRect;
                 GetClientRect(Window, &ClientRect);
