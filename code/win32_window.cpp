@@ -5,15 +5,15 @@
 #define local_persist static 
 #define global_variable static
 
-typedef uint8_t u8;     // 1-byte long unsigned integer
-typedef uint16_t u16;   // 2-byte long unsigned integer
-typedef uint32_t u32;   // 4-byte long unsigned integer
-typedef uint64_t u64;   // 8-byte long unsigned integer
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
-typedef int8_t s8;      // 1-byte long signed integer
-typedef int16_t s16;    // 2-byte long signed integer
-typedef int32_t s32;    // 4-byte long signed integer
-typedef int64_t s64;    // 8-byte long signed integer
+typedef int8_t s8;
+typedef int16_t s16;
+typedef int32_t s32;
+typedef int64_t s64;
 
 global_variable bool Running;
 global_variable BITMAPINFO BitmapInfo;
@@ -21,7 +21,39 @@ global_variable void *BitmapMemory;
 global_variable int BitmapWidth;
 global_variable int BitmapHeight;
 
-global_variable int BytesPerPixel = 4;
+global_variable int BytesPerPixel;
+
+internal void
+RenderGradient(int XOffset, int YOffset)
+{
+    int Pitch = BitmapWidth * BytesPerPixel;
+    u8 *Row = (u8 *)BitmapMemory;
+    
+    for (int Y = 0;
+         Y < BitmapHeight;
+         ++Y)
+    {
+        u8 *Pixel = (u8 *)Row;
+        for(int X = 0;
+            X < BitmapWidth;
+            ++X)
+        {
+            // Pixel in memory: BB GG RR XX -> little endian
+            *Pixel = (u8)(X + XOffset);
+            ++Pixel;
+            
+            *Pixel = (u8)(Y + YOffset);
+            ++Pixel;
+            
+            *Pixel = (u8)Row;
+            ++Pixel;
+            
+            *Pixel = 0;
+            ++Pixel;
+        }
+        Row += Pitch;
+    }
+}
 
 internal void
 Win32ResizeDIBSection(int Width, int Height)
@@ -44,37 +76,11 @@ Win32ResizeDIBSection(int Width, int Height)
     BitmapInfo.bmiHeader.biBitCount = 32;
     BitmapInfo.bmiHeader.biCompression = BI_RGB;
     
+    BytesPerPixel = 4;
     int BitmapMemorySize = BytesPerPixel * (BitmapWidth * BitmapHeight);
     BitmapMemory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE); 
     
-    u8 *Row = (u8 *)BitmapMemory;
-    int Pitch = Width * BytesPerPixel;
-    
-    for (int Y = 0;
-         Y < BitmapHeight;
-         ++Y)
-    {
-        u8 *Pixel = (u8 *)Row;
-        for(int X = 0;
-            X < BitmapWidth;
-            ++X)
-        {
-            // Pixel in memory: BB GG RR XX
-            
-            *Pixel = 34; // write to byte 0
-            ++Pixel;   // advance by total of one byte
-            
-            *Pixel = 34; // write to byte 1
-            ++Pixel;   // advance by total of two bytes
-            
-            *Pixel = 34; // write to byte 2
-            ++Pixel;   // advance by total of three bytes
-            
-            *Pixel = 0; // write to byte 3 
-            ++Pixel;   // advance by total of four bytes -> full pixel!ixel
-        }
-        Row += Pitch;
-    }
+    RenderGradient(128, 0);
 }
 
 internal void
@@ -195,11 +201,7 @@ WinMain(HINSTANCE Instance,
                 HDC DeviceContext = GetDC(Window);
                 RECT ClientRect;
                 GetClientRect(Window, &ClientRect);
-
-                int WindowWidth = ClientRect.right - ClientRect.left;
-                int WindowHeight = ClientRect.bottom - ClientRect.top;
                 Win32UpdateWindow(DeviceContext, &ClientRect);
-                
                 ReleaseDC(Window, DeviceContext);
             }
         }
