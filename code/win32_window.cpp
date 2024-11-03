@@ -33,23 +33,16 @@ RenderGradient(int XOffset, int YOffset)
          Y < BitmapHeight;
          ++Y)
     {
-        u8 *Pixel = (u8 *)Row;
+        u32 *Pixel = (u32 *)Row;
         for(int X = 0;
             X < BitmapWidth;
             ++X)
         {
             // Pixel in memory: BB GG RR XX -> little endian
-            *Pixel = (u8)(X + XOffset);
-            ++Pixel;
-            
-            *Pixel = (u8)(Y + YOffset);
-            ++Pixel;
-            
-            *Pixel = (u8)Row;
-            ++Pixel;
-            
-            *Pixel = 0;
-            ++Pixel;
+            u8 Red = X - Y;
+            u8 Green = (u8)(X - YOffset);
+            u8 Blue = (u8)(X + XOffset);    
+            *Pixel++ = Red << 16 | Green << 8 | Blue; // << 0
         }
         Row += Pitch;
     }
