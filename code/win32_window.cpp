@@ -25,7 +25,7 @@ struct win32_offscreen_buffer
     int Width;
     int Height;
     int Pitch;
-    int BytesPerPixel;
+    //int BytesPerPixel;
 };
 
 struct win32_window_dimension
@@ -85,8 +85,8 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
     Buffer->Width = Width;
     Buffer->Height = Height;
-    Buffer->BytesPerPixel = 4;
-    Buffer->Pitch = Buffer->Width * Buffer->BytesPerPixel;
+
+    int BytesPerPixel = 4;
 
     BITMAPINFO Info = {};
     Buffer->Info.bmiHeader.biSize = sizeof(Buffer->Info.bmiHeader);
@@ -96,8 +96,9 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
     Buffer->Info.bmiHeader.biBitCount = 32;
     Buffer->Info.bmiHeader.biCompression = BI_RGB;
 
-    int BitmapMemorySize = Buffer->BytesPerPixel * (Buffer->Width * Buffer->Height);
+    int BitmapMemorySize = BytesPerPixel * (Buffer->Width * Buffer->Height);
     Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    Buffer->Pitch = Width * BytesPerPixel;
 }
 
 internal void
@@ -121,12 +122,13 @@ Win32MainWindowCallback(HWND Window,
 
     switch (Message)
     {
+/*
         case WM_SIZE:
         {
             win32_window_dimension Dimension = Win32GetWindowDimension(Window);
             Win32ResizeDIBSection(&GlobalBackbuffer, Dimension.Width, Dimension.Height);
         } break;
-
+*/
         case WM_DESTROY:
         {
             Running = false;
@@ -168,6 +170,9 @@ WinMain(HINSTANCE Instance,
         int ShowCode)
 {
     WNDCLASS WindowClass = {};
+
+    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+
     WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
     WindowClass.hInstance = Instance;
@@ -216,10 +221,11 @@ WinMain(HINSTANCE Instance,
                 }
 
                 RenderGradient(&GlobalBackbuffer, XOffset, YOffset);
-                ++XOffset;
-                
+
                 win32_window_dimension Dimension = Win32GetWindowDimension(Window);
                 Win32DisplayBufferInWindow(&GlobalBackbuffer, DeviceContext, Dimension.Width, Dimension.Height);
+
+                ++XOffset;
             }
         }
         else
